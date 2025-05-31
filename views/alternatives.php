@@ -31,12 +31,6 @@ if (!empty($alternatives)) {
             </tr>
         ';
     }
-} else {
-    $tbody = '
-            <tr class="hover:bg-base-300">
-                <td colspan="6" class="text-center">Tidak ada data tersedia</td>
-            </tr>
-        ';
 }
 
 ?>

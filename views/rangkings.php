@@ -94,12 +94,6 @@ if (!empty($ranked)) {
             </tr>
         ';
     }
-} else {
-    $tbody = '
-            <tr class="hover:bg-base-300">
-                <td colspan="12" class="text-center">Tidak ada data tersedia</td>
-            </tr>
-        ';
 }
 
 $query = "

@@ -111,21 +111,16 @@ $sum_weight = $conn->query("SELECT SUM(weight) FROM criterias")->fetch(PDO::FETC
                         <span class="mr-2">🏆</span> Top 5 Dosen Terbaik Saat Ini
                     </h2>
                     <ul class="space-y-2">
-                        <li class="flex items-center text-gray-700 py-1 px-3 rounded-lg hover:bg-gray-50">
-                            <span class="font-medium text-primary-600 mr-2">1.</span> <?= $ranked[0]['name'] . ' (' . round($ranked[0]['nilai_akhir'], 4) . ')' ?? '-'; ?>
-                        </li>
-                        <li class="flex items-center text-gray-700 py-1 px-3 rounded-lg hover:bg-gray-50">
-                            <span class="font-medium text-primary-600 mr-2">2.</span> <?= $ranked[1]['name'] . ' (' . round($ranked[1]['nilai_akhir'], 4) . ')' ?? '-'; ?>
-                        </li>
-                        <li class="flex items-center text-gray-700 py-1 px-3 rounded-lg hover:bg-gray-50">
-                            <span class="font-medium text-primary-600 mr-2">3.</span> <?= $ranked[2]['name'] . ' (' . round($ranked[2]['nilai_akhir'], 4) . ')' ?? '-'; ?>
-                        </li>
-                        <li class="flex items-center text-gray-700 py-1 px-3 rounded-lg hover:bg-gray-50">
-                            <span class="font-medium text-primary-600 mr-2">4.</span> <?= $ranked[3]['name'] . ' (' . round($ranked[3]['nilai_akhir'], 4) . ')' ?? '-'; ?>
-                        </li>
-                        <li class="flex items-center text-gray-700 py-1 px-3 rounded-lg hover:bg-gray-50">
-                            <span class="font-medium text-primary-600 mr-2">5.</span> <?= $ranked[4]['name'] . ' (' . round($ranked[4]['nilai_akhir'], 4) . ')' ?? '-'; ?>
-                        </li>
+                        <?php for ($i = 0; $i < 5; $i++): ?>
+                            <li class="flex items-center text-gray-700 py-1 px-3 rounded-lg hover:bg-gray-50">
+                                <span class="font-medium text-primary-600 mr-2"><?= $i + 1; ?>.</span>
+                                <?php if (isset($ranked[$i]['name'], $ranked[$i]['nilai_akhir'])): ?>
+                                    <?= $ranked[$i]['name'] . ' (' . $ranked[$i]['nilai_akhir'] . ')'; ?>
+                                <?php else: ?>
+                                    -
+                                <?php endif; ?>
+                            </li>
+                        <?php endfor; ?>
                     </ul>
                 </div>
 
@@ -138,22 +133,20 @@ $sum_weight = $conn->query("SELECT SUM(weight) FROM criterias")->fetch(PDO::FETC
                         Sistem ini menggunakan metode <span class="font-medium text-primary-600">Weighted Product (WP)</span> untuk menentukan peringkat Dosen atau tenaga kependidikan terbaik berdasarkan 4 kriteria:
                     </p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                        <div class="bg-primary-50 rounded-lg p-4 text-center">
-                            <div class="font-medium text-primary-700">Kehadiran</div>
-                            <div class="text-lg font-bold text-primary-800 mt-1"><?= $weightsData['C1'] ?? '-'; ?></div>
-                        </div>
-                        <div class="bg-primary-50 rounded-lg p-4 text-center">
-                            <div class="font-medium text-primary-700">Sikap Profesional</div>
-                            <div class="text-lg font-bold text-primary-800 mt-1"><?= $weightsData['C2'] ?? '-'; ?></div>
-                        </div>
-                        <div class="bg-primary-50 rounded-lg p-4 text-center">
-                            <div class="font-medium text-primary-700">Tanggung Jawab</div>
-                            <div class="text-lg font-bold text-primary-800 mt-1"><?= $weightsData['C3'] ?? '-'; ?></div>
-                        </div>
-                        <div class="bg-primary-50 rounded-lg p-4 text-center">
-                            <div class="font-medium text-primary-700">Orientasi Layanan</div>
-                            <div class="text-lg font-bold text-primary-800 mt-1"><?= $weightsData['C4'] ?? '-'; ?></div>
-                        </div>
+                        <?php
+                        $kriteria = [
+                            'C1' => 'Kehadiran',
+                            'C2' => 'Sikap Profesional',
+                            'C3' => 'Tanggung Jawab',
+                            'C4' => 'Orientasi Layanan',
+                        ];
+                        ?>
+                        <?php foreach ($kriteria as $kode => $label): ?>
+                            <div class="bg-primary-50 rounded-lg p-4 text-center">
+                                <div class="font-medium text-primary-700"><?= $label; ?></div>
+                                <div class="text-lg font-bold text-primary-800 mt-1"><?= isset($weightsData[$kode]) ? $weightsData[$kode] : '-'; ?></div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
