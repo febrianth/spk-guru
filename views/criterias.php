@@ -15,7 +15,6 @@ $action_buttons = '';
 if (!empty($criterias)) {
     foreach ($criterias as $index => $v) {
         $action_buttons = '<button class="btn btn-warning mr-2" title="edit data" onclick="handleEdit(' . $v['id'] . ')"><i class="fas fa-pen"></i></button>';
-        // $action_buttons .= '<button class="btn btn-error" title="hapus data"><i class="fas fa-trash" onclick="handleDelete(' . $v['id'] . ')"></i></button>';
         $tbody .= '
             <tr class="hover:bg-base-300">
                 <td>' . $index + 1 . '</td>
@@ -100,7 +99,7 @@ if (!empty($criterias)) {
                     </div>
                     <div>
                         <label class="label">Nama</label>
-                        <input type="text" name="name" id="name" class="input input-bordered w-full" disabled>
+                        <input type="text" name="name" id="name" class="input input-bordered w-full" required>
                     </div>
                     <div>
                         <label class="label">Bobot</label>
@@ -108,7 +107,7 @@ if (!empty($criterias)) {
                     </div>
                     <div>
                         <label class="label">Atribut</label>
-                        <select name="attribute" id="attribute" class="select select-bordered w-full" disabled>
+                        <select name="attribute" id="attribute" class="select select-bordered w-full" required>
                             <option value="">-- Pilih --</option>
                             <option value="benefit">Benefit</option>
                             <option value="cost">Cost</option>

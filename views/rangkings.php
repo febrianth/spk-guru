@@ -3,11 +3,10 @@ require_once '../api/auth-check.php';
 require_once '../config/database.php';
 
 $conn = Database::getConnection(); // Inisialisasi koneksi
-
 $query = "
     SELECT 
         a.*, 
-        s.kehadiran, s.sikap_profesional, s.tanggung_jawab, s.orientasi_layanan
+        s.C1, s.C2, s.C3, s.C4
     FROM alternatives AS a
     INNER JOIN scores AS s 
             ON s.alternative_id = a.id
@@ -21,27 +20,59 @@ $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $ranked = [];
 $totalS = 0;
 
-// Ambil bobot dari tabel kriteria
-$weightsQuery = "SELECT code, weight FROM criterias";
-$weightsStmt = $conn->prepare($weightsQuery);
-$weightsStmt->execute();
-$weightsData = $weightsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+// Ambil bobot dan TIPE kriteria dari tabel
+$criteriaQuery = "SELECT code, weight, attribute, name FROM criterias";
+$criteriaStmt = $conn->prepare($criteriaQuery);
+$criteriaStmt->execute();
+$allCriteria = $criteriaStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$criteriaData = [];
+foreach ($allCriteria as $v) {
+    $criteriaData[$v['code']] = [
+        'weight' => $v['weight'],
+        'attribute' => $v['attribute'],
+        'name' => $v['name']
+    ];
+}
+
+// Proses Perhitungan Nilai S
 foreach ($data as $row) {
     $S = 1;
-    $S *= pow($row['kehadiran'], $weightsData['C1']);
-    $S *= pow($row['sikap_profesional'], $weightsData['C2']);
-    $S *= pow($row['tanggung_jawab'], $weightsData['C3']);
-    $S *= pow($row['orientasi_layanan'], $weightsData['C4']);
+
+    // Definisikan pemetaan kolom skor ke kode kriteria
+    $criteriaMapping = [
+        'C1',
+        'C2',
+        'C3',
+        'C4'
+    ];
+
+    foreach ($criteriaMapping as $code) {
+        // Ambil data kriteria saat ini
+        $criterion = $criteriaData[$code];
+        $weight = $criterion['weight'];
+        $attribute = $criterion['attribute'];
+        $score = $row[$code];
+
+        // **KONDISI UTAMA: Cek tipe kriteria (cost atau benefit)**
+        if ($attribute == 'cost') {
+            // Jika 'cost', gunakan bobot negatif
+            $S *= pow($score, -$weight);
+        } else {
+            // Jika 'benefit', gunakan bobot positif (standar)
+            $S *= pow($score, $weight);
+        }
+    }
 
     $row['nilai_akhir'] = $S;
     $totalS += $S;
     $ranked[] = $row;
 }
 
-// 2. Hitung nilai normalisasi
+// 2. Hitung nilai normalisasi (Vektor V)
 foreach ($ranked as &$row) {
-    $row['normalisasi'] = $row['nilai_akhir'] / $totalS;
+    // Hindari pembagian dengan nol jika tidak ada data
+    $row['normalisasi'] = ($totalS > 0) ? ($row['nilai_akhir'] / $totalS) : 0;
 }
 unset($row);
 
@@ -68,10 +99,10 @@ if (!empty($ranked)) {
                 <td>' . htmlspecialchars($v['nip']) . '</td>
                 <td>' . $position . '</td>
                 <td>' . $type . '</td>
-                <td>' . $v['kehadiran'] . '</td>
-                <td>' . $v['sikap_profesional'] . '</td>
-                <td>' . $v['tanggung_jawab'] . '</td>
-                <td>' . $v['orientasi_layanan'] . '</td>
+                <td>' . $v['C1'] . '</td>
+                <td>' . $v['C2'] . '</td>
+                <td>' . $v['C3'] . '</td>
+                <td>' . $v['C4'] . '</td>
                 <td>' . round($v['normalisasi'], 4) . '</td>
                 <td>' . round($v['nilai_akhir'], 4) . '</td>
                 <td>' . $action_buttons . '</td>
@@ -85,10 +116,10 @@ if (!empty($ranked)) {
                 <td style="border: 1px solid black;">' . htmlspecialchars($v['nip']) . '</td>
                 <td style="border: 1px solid black;">' . $position . '</td>
                 <td style="border: 1px solid black;">' . $type . '</td>
-                <td style="border: 1px solid black;">' . $v['kehadiran'] . '</td>
-                <td style="border: 1px solid black;">' . $v['sikap_profesional'] . '</td>
-                <td style="border: 1px solid black;">' . $v['tanggung_jawab'] . '</td>
-                <td style="border: 1px solid black;">' . $v['orientasi_layanan'] . '</td>
+                <td style="border: 1px solid black;">' . $v['C1'] . '</td>
+                <td style="border: 1px solid black;">' . $v['C2'] . '</td>
+                <td style="border: 1px solid black;">' . $v['C3'] . '</td>
+                <td style="border: 1px solid black;">' . $v['C4'] . '</td>
                 <td style="border: 1px solid black;">' . round($v['normalisasi'], 4) . '</td>
                 <td style="border: 1px solid black;">' . round($v['nilai_akhir'], 4) . '</td>
             </tr>
@@ -182,10 +213,10 @@ $sum_weight = $conn->query("SELECT SUM(weight) FROM criterias")->fetch(PDO::FETC
                             <th style="text-align: left;">NIP</th>
                             <th style="text-align: left;">Jabatan</th>
                             <th style="text-align: left;">Tipe</th>
-                            <th style="text-align: left;">Kehadiran</th>
-                            <th style="text-align: left;">Sikap Profesional</th>
-                            <th style="text-align: left;">Tanggung Jawab</th>
-                            <th style="text-align: left;">Orientasi Layanan</th>
+                            <th style="text-align: left;">C1</th>
+                            <th style="text-align: left;">C2</th>
+                            <th style="text-align: left;">C3</th>
+                            <th style="text-align: left;">C4</th>
                             <th style="text-align: left;">Normalisasi</th>
                             <th style="text-align: left;">Nilai Akhir</th>
                             <th style="text-align: left;">Aksi</th>
@@ -212,10 +243,10 @@ $sum_weight = $conn->query("SELECT SUM(weight) FROM criterias")->fetch(PDO::FETC
                             <th style="border: 1px solid black;">NIP</th>
                             <th style="border: 1px solid black;">Jabatan</th>
                             <th style="border: 1px solid black;">Tipe</th>
-                            <th style="border: 1px solid black;">Kehadiran</th>
-                            <th style="border: 1px solid black;">Sikap Profesional</th>
-                            <th style="border: 1px solid black;">Tanggung Jawab</th>
-                            <th style="border: 1px solid black;">Orientasi Layanan</th>
+                            <th style="border: 1px solid black;">C1</th>
+                            <th style="border: 1px solid black;">C2</th>
+                            <th style="border: 1px solid black;">C3</th>
+                            <th style="border: 1px solid black;">C4</th>
                             <th style="border: 1px solid black;">Normalisasi</th>
                             <th style="border: 1px solid black;">Nilai Akhir</th>
                         </tr>
@@ -253,48 +284,20 @@ $sum_weight = $conn->query("SELECT SUM(weight) FROM criterias")->fetch(PDO::FETC
 
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="label">Kehadiran</label>
-                        <select name="kehadiran" id="kehadiran" class="select select-bordered w-full" required>
-                            <option value="">Pilih Level...</option>
-                            <option value="1.00">Level 1</option>
-                            <option value="2.00">Level 2</option>
-                            <option value="3.00">Level 3</option>
-                            <option value="4.00">Level 4</option>
-                            <option value="5.00">Level 5</option>
-                        </select>
+                        <label class="label">C1</label>
+                        <input type="number" min="0.1" name="C1" id="C1" class="input w-full" required>
                     </div>
                     <div>
-                        <label class="label">Sikap Profesional</label>
-                        <select name="sikap_profesional" id="sikap_profesional" class="select select-bordered w-full" required>
-                            <option value="">Pilih Level...</option>
-                            <option value="1.00">Level 1</option>
-                            <option value="2.00">Level 2</option>
-                            <option value="3.00">Level 3</option>
-                            <option value="4.00">Level 4</option>
-                            <option value="5.00">Level 5</option>
-                        </select>
+                        <label class="label">C2</label>
+                        <input type="number" min="0.1" name="C2" id="C2" class="input w-full" required>
                     </div>
                     <div>
-                        <label class="label">Tanggung Jawab</label>
-                        <select name="tanggung_jawab" id="tanggung_jawab" class="select select-bordered w-full" required>
-                            <option value="">Pilih Level...</option>
-                            <option value="1.00">Level 1</option>
-                            <option value="2.00">Level 2</option>
-                            <option value="3.00">Level 3</option>
-                            <option value="4.00">Level 4</option>
-                            <option value="5.00">Level 5</option>
-                        </select>
+                        <label class="label">C3</label>
+                        <input type="number" min="0.1" name="C3" id="C3" class="input w-full" required>
                     </div>
                     <div>
-                        <label class="label">Orientasi Layanan Pelanggan</label>
-                        <select name="orientasi_layanan" id="orientasi_layanan" class="select select-bordered w-full" required>
-                            <option value="">Pilih Level...</option>
-                            <option value="1.00">Level 1</option>
-                            <option value="2.00">Level 2</option>
-                            <option value="3.00">Level 3</option>
-                            <option value="4.00">Level 4</option>
-                            <option value="5.00">Level 5</option>
-                        </select>
+                        <label class="label">C4</label>
+                        <input type="number" min="0.1" name="C4" id="C4" class="input w-full" required>
                     </div>
                 </div>
 
@@ -403,10 +406,10 @@ $sum_weight = $conn->query("SELECT SUM(weight) FROM criterias")->fetch(PDO::FETC
                     document.querySelector('#alternative_field').style.display = 'none';
 
                     // Isi nilai masing-masing kriteria berdasarkan id
-                    document.getElementById('kehadiran').value = data.kehadiran || '';
-                    document.getElementById('orientasi_layanan').value = data.orientasi_layanan || '';
-                    document.getElementById('sikap_profesional').value = data.sikap_profesional || '';
-                    document.getElementById('tanggung_jawab').value = data.tanggung_jawab || '';
+                    document.getElementById('C1').value = data.C1 || '';
+                    document.getElementById('C2').value = data.C2 || '';
+                    document.getElementById('C3').value = data.C3 || '';
+                    document.getElementById('C4').value = data.C4 || '';
 
                     document.getElementById('modalTitle').textContent = 'Edit Penilaian';
                     document.getElementById('modalTambahData').showModal();

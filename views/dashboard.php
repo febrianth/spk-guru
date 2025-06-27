@@ -3,11 +3,10 @@ require_once '../api/auth-check.php';
 require_once '../config/database.php';
 
 $conn = Database::getConnection(); // Inisialisasi koneksi
-
 $query = "
     SELECT 
         a.*, 
-        s.kehadiran, s.sikap_profesional, s.tanggung_jawab, s.orientasi_layanan
+        s.C1, s.C2, s.C3, s.C4
     FROM alternatives AS a
     INNER JOIN scores AS s 
             ON s.alternative_id = a.id
@@ -21,27 +20,59 @@ $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $ranked = [];
 $totalS = 0;
 
-// Ambil bobot dari tabel kriteria
-$weightsQuery = "SELECT code, weight FROM criterias";
-$weightsStmt = $conn->prepare($weightsQuery);
-$weightsStmt->execute();
-$weightsData = $weightsStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+// Ambil bobot dan TIPE kriteria dari tabel
+$criteriaQuery = "SELECT code, weight, attribute, name FROM criterias";
+$criteriaStmt = $conn->prepare($criteriaQuery);
+$criteriaStmt->execute();
+$allCriteria = $criteriaStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$criteriaData = [];
+foreach ($allCriteria as $v) {
+    $criteriaData[$v['code']] = [
+        'weight' => $v['weight'],
+        'attribute' => $v['attribute'],
+        'name' => $v['name']
+    ];
+}
+
+// Proses Perhitungan Nilai S
 foreach ($data as $row) {
     $S = 1;
-    $S *= pow($row['kehadiran'], $weightsData['C1']);
-    $S *= pow($row['sikap_profesional'], $weightsData['C2']);
-    $S *= pow($row['tanggung_jawab'], $weightsData['C3']);
-    $S *= pow($row['orientasi_layanan'], $weightsData['C4']);
+
+    // Definisikan pemetaan kolom skor ke kode kriteria
+    $criteriaMapping = [
+        'C1',
+        'C2',
+        'C3',
+        'C4'
+    ];
+
+    foreach ($criteriaMapping as $code) {
+        // Ambil data kriteria saat ini
+        $criterion = $criteriaData[$code];
+        $weight = $criterion['weight'];
+        $attribute = $criterion['attribute'];
+        $score = $row[$code];
+
+        // **KONDISI UTAMA: Cek tipe kriteria (cost atau benefit)**
+        if ($attribute == 'cost') {
+            // Jika 'cost', gunakan bobot negatif
+            $S *= pow($score, -$weight);
+        } else {
+            // Jika 'benefit', gunakan bobot positif (standar)
+            $S *= pow($score, $weight);
+        }
+    }
 
     $row['nilai_akhir'] = $S;
     $totalS += $S;
     $ranked[] = $row;
 }
 
-// 2. Hitung nilai normalisasi
+// 2. Hitung nilai normalisasi (Vektor V)
 foreach ($ranked as &$row) {
-    $row['normalisasi'] = $row['nilai_akhir'] / $totalS;
+    // Hindari pembagian dengan nol jika tidak ada data
+    $row['normalisasi'] = ($totalS > 0) ? ($row['nilai_akhir'] / $totalS) : 0;
 }
 unset($row);
 
@@ -49,7 +80,6 @@ unset($row);
 usort($ranked, function ($a, $b) {
     return $b['nilai_akhir'] <=> $a['nilai_akhir'];
 });
-
 
 //alert if weight less than 1
 $sum_weight = $conn->query("SELECT SUM(weight) FROM criterias")->fetch(PDO::FETCH_COLUMN);
@@ -132,22 +162,16 @@ $sum_weight = $conn->query("SELECT SUM(weight) FROM criterias")->fetch(PDO::FETC
                     <p class="text-gray-700 mb-3">
                         Sistem ini menggunakan metode <span class="font-medium text-primary-600">Weighted Product (WP)</span> untuk menentukan peringkat Dosen atau tenaga kependidikan terbaik berdasarkan 4 kriteria:
                     </p>
+                    <?php if (!empty($allCriteria)): ?>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                        <?php
-                        $kriteria = [
-                            'C1' => 'Kehadiran',
-                            'C2' => 'Sikap Profesional',
-                            'C3' => 'Tanggung Jawab',
-                            'C4' => 'Orientasi Layanan',
-                        ];
-                        ?>
-                        <?php foreach ($kriteria as $kode => $label): ?>
+                        <?php foreach ($allCriteria as $v): ?>
                             <div class="bg-primary-50 rounded-lg p-4 text-center">
-                                <div class="font-medium text-primary-700"><?= $label; ?></div>
-                                <div class="text-lg font-bold text-primary-800 mt-1"><?= isset($weightsData[$kode]) ? $weightsData[$kode] : '-'; ?></div>
+                                <div class="font-medium text-primary-700"><?= $v['name']; ?></div>
+                                <div class="text-lg font-bold text-primary-800 mt-1"><?= isset($v['code']) ? $v['weight'] : '-'; ?></div>
                             </div>
                         <?php endforeach; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Usage Tips Card -->

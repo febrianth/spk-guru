@@ -9,34 +9,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $alternative_id = $_POST['alternative_id'] ?? '';
 
     // Skor nilai
-    $kehadiran = $_POST['kehadiran'] ?? null;
-    $sikap = $_POST['sikap_profesional'] ?? null;
-    $tanggung_jawab = $_POST['tanggung_jawab'] ?? null;
-    $orientasi = $_POST['orientasi_layanan'] ?? null;
+    $C1 = $_POST['C1'] ?? null;
+    $C2 = $_POST['C2'] ?? null;
+    $C3 = $_POST['C3'] ?? null;
+    $C4 = $_POST['C4'] ?? null;
 
-    if ($kehadiran && $sikap && $tanggung_jawab && $orientasi) {
+    if ($C1 && $C2 && $C3 && $C4) {
         try {
             $conn = Database::getConnection();
 
             if ($id) {
                 // UPDATE
                 $query = "UPDATE scores 
-                          SET kehadiran = :kehadiran, sikap_profesional = :sikap, tanggung_jawab = :tanggung_jawab, orientasi_layanan = :orientasi 
+                          SET C1 = :C1, C2 = :C2, C3 = :C3, C4 = :C4 
                           WHERE alternative_id = :id";
                 $stmt = $conn->prepare($query);
                 $stmt->bindParam(':id', $id, PDO::PARAM_INT);
             } else {
                 // INSERT
-                $query = "INSERT INTO scores (alternative_id, kehadiran, sikap_profesional, tanggung_jawab, orientasi_layanan) 
-                          VALUES (:alternative_id, :kehadiran, :sikap, :tanggung_jawab, :orientasi)";
+                $query = "INSERT INTO scores (alternative_id, c1, C2, C3, C4) 
+                          VALUES (:alternative_id, :C1, :C2, :C3, :C4)";
                 $stmt = $conn->prepare($query);
                 $stmt->bindParam(':alternative_id', $alternative_id);
             }
 
-            $stmt->bindParam(':kehadiran', $kehadiran);
-            $stmt->bindParam(':sikap', $sikap);
-            $stmt->bindParam(':tanggung_jawab', $tanggung_jawab);
-            $stmt->bindParam(':orientasi', $orientasi);
+            $stmt->bindParam(':C1', $C1);
+            $stmt->bindParam(':C2', $C2);
+            $stmt->bindParam(':C3', $C3);
+            $stmt->bindParam(':C4', $C4);
             $stmt->execute();
 
             echo json_encode([

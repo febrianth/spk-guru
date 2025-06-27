@@ -7,6 +7,8 @@ header('Content-Type: application/json');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = $_POST['id'] ?? null;
     $weight = $_POST['weight'] ?? '';
+    $name = $_POST['name'] ?? '';
+    $attribute = $_POST['attribute'] ?? '';
 
     if ($weight !== '' && $id) {
         try {
@@ -36,17 +38,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // UPDATE
             $query = "UPDATE criterias 
-                        SET weight = :weight
+                        SET weight = :weight, attribute = :attribute, name = :name
                         WHERE id = :id";
             $stmt = $conn->prepare($query);
             $stmt->bindParam(':id', $id, PDO::PARAM_INT);
 
             $stmt->bindParam(':weight', $weight);
+            $stmt->bindParam(':name', $name);
+            $stmt->bindParam(':attribute', $attribute);
             $stmt->execute();
 
             echo json_encode([
                 'success' => true,
-                'message' => $id ? 'Data berhasil diperbarui.' : 'Data berhasil ditambahkan.'
+                'message' => 'Data berhasil diperbarui.'
             ]);
         } catch (PDOException $e) {
             http_response_code(500);
